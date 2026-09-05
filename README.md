@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.jpg" width="220" alt="Aashu logo" />
+  <img src="assets/ddos.jpg" width="220" alt="Aashu logo" />
 </p>
 
 <h1 align="center">Aashu – HTTP/2 Stress Testing Tool</h1>
