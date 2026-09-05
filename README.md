@@ -15,10 +15,15 @@ Note: This tool is intended for authorised security testing and performance benc
 Features
 
 · HTTP/2 reset flood – rapidly opens and cancels streams to exhaust server resources.
+
 · Priority‑frame bombing – sends excessive priority updates per stream, increasing CPU overhead.
+
 · Settings toggling – continuously flips SETTINGS_ENABLE_PUSH to confuse the server state machine.
+
 · Optional proxy rotation – uses HTTP CONNECT proxies (IP:PORT per line) to distribute traffic and hide the source.
+
 · Fully asynchronous – built with asyncio and the h2 library, scaling to thousands of concurrent connections.
+
 · Cross‑platform – runs on Termux (Android), Linux, Windows, and macOS.
 
 ---
