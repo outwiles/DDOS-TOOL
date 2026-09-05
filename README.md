@@ -8,25 +8,30 @@
   A high‑performance asynchronous HTTP/2 load generator – designed to test the resilience of web servers under extreme conditions.
 </p>
 
-> **Note:** This tool is intended for **authorised security testing** and **performance benchmarking** only. Unauthorised use against third‑party systems is illegal and unethical. Use at your own risk.
+Note: This tool is intended for authorised security testing and performance benchmarking only. Unauthorised use against third‑party systems is illegal and unethical. Use at your own risk.
 
-## Features
+---
 
-- **HTTP/2 reset flood** – rapidly opens and cancels streams to exhaust server resources.
-- **Priority‑frame bombing** – sends excessive priority updates per stream, increasing CPU overhead.
-- **Settings toggling** – continuously flips `SETTINGS_ENABLE_PUSH` to confuse the server state machine.
-- **Optional proxy rotation** – uses HTTP CONNECT proxies (IP:PORT per line) to distribute traffic and hide the source.
-- **Fully asynchronous** – built with `asyncio` and the `h2` library, scaling to thousands of concurrent connections.
-- **Cross‑platform** – runs on Termux (Android), Linux, Windows, and macOS.
+Features
 
-## Installation
+· HTTP/2 reset flood – rapidly opens and cancels streams to exhaust server resources.
+· Priority‑frame bombing – sends excessive priority updates per stream, increasing CPU overhead.
+· Settings toggling – continuously flips SETTINGS_ENABLE_PUSH to confuse the server state machine.
+· Optional proxy rotation – uses HTTP CONNECT proxies (IP:PORT per line) to distribute traffic and hide the source.
+· Fully asynchronous – built with asyncio and the h2 library, scaling to thousands of concurrent connections.
+· Cross‑platform – runs on Termux (Android), Linux, Windows, and macOS.
 
-### Termux (Android)
+---
+
+Installation
+
+Termux (Android)
+
 ```bash
 pkg update && pkg upgrade -y
 pkg install python git -y
-git clone https://github.com/yourusername/aashu.git
-cd aashu
+git clone https://github.com/outwiles/DDOS-TOOL.git
+cd DDOS-TOOL
 pip install -r requirements.txt
 ```
 
@@ -39,8 +44,8 @@ sudo apt update && sudo apt install python3 python3-pip git -y
 # macOS (with Homebrew)
 brew install python git
 
-git clone https://github.com/yourusername/aashu.git
-cd aashu
+git clone https://github.com/outwiles/DDOS-TOOL.git
+cd DDOS-TOOL
 pip3 install -r requirements.txt
 ```
 
@@ -50,14 +55,16 @@ Windows
 · Open Command Prompt (Admin) and run:
 
 ```cmd
-git clone https://github.com/yourusername/aashu.git
-cd aashu
+git clone https://github.com/outwiles/DDOS-TOOL.git
+cd DDOS-TOOL
 pip install -r requirements.txt
 ```
 
+---
+
 Usage
 
-Run the script with:
+Run the script:
 
 ```bash
 python aashu.py
@@ -90,6 +97,8 @@ Duration in seconds (0 = infinite): 120
 
 While running, the tool displays active worker counts every 2 seconds. Press Ctrl+C to stop gracefully.
 
+---
+
 Proxy File Format
 
 Each line must contain a valid HTTP CONNECT proxy:
@@ -102,9 +111,11 @@ Each line must contain a valid HTTP CONNECT proxy:
 
 Note: Only anonymous proxies without authentication are supported.
 
-Configuration (Environment Variables)
+---
 
-Although the tool is interactive, you can preset the following environment variables to skip prompts:
+Environment Variables (Optional)
+
+To skip interactive prompts, preset these variables:
 
 Variable Purpose
 AASHU_TARGET Target URL/IP
@@ -124,7 +135,7 @@ export AASHU_PROXIES="proxies.txt"
 python aashu.py
 ```
 
-If an environment variable is set, the script will not ask for that input.
+---
 
 Running on a VPS / Cloud Server
 
@@ -136,12 +147,16 @@ python aashu.py
 # Press Ctrl+A, D to detach
 ```
 
+---
+
 Important Disclaimer
 
 · This tool generates heavy network traffic and can cause service disruption.
 · You must have explicit written permission from the system owner before testing.
 · The author assumes no liability for any misuse or damage caused by this software.
 · Use it only on your own infrastructure or during authorised penetration tests.
+
+---
 
 Credits
 
@@ -157,4 +172,3 @@ Credits
     <img src="https://img.shields.io/badge/Mail-outwiles%40proton.me-D14836?style=for-the-badge&logo=protonmail&logoColor=white" alt="Mail" />
   </a>
 </p>
-```
