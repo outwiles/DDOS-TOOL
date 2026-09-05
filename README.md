@@ -152,7 +152,7 @@ Important Disclaimer
 
 ---
 
-Credits
+# Credits
 
 <p align="center">
   <b>Developed by Aashu</b><br/><br/>
