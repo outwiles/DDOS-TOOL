@@ -67,7 +67,7 @@ Usage
 Run the script:
 
 ```bash
-python aashu.py
+python ddos.py
 ```
 
 You will be interactively prompted for:
