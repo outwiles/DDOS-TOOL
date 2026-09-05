@@ -137,17 +137,6 @@ python aashu.py
 
 ---
 
-Running on a VPS / Cloud Server
-
-For 24/7 operation, deploy on a VPS (e.g., DigitalOcean, AWS EC2) and use a process manager like screen or tmux:
-
-```bash
-screen -S aashu
-python aashu.py
-# Press Ctrl+A, D to detach
-```
-
----
 
 Important Disclaimer
 
