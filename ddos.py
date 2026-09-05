@@ -6,12 +6,12 @@ Aashu1=80;Aashu2=40;Aashu3=300000;Aashu4=150;Aashu5=0.005
 def Aashu12(p,d=None):
  v=input(p).strip()
  return v if v else d
-banner=render(' Aashu',font='block',colors=['cyan','black'],align='center',background='red')
+banner=render(' Aashu',font='block',colors=['red','white'],align='center',background='red')
 print('\x1b[1;39m━'*63);print(banner);print('\x1b[1;39m━'*63)
 import sys,time
 Aashu13="DDOS tool by Aashu"
 for i in range(len(Aashu13)+1):
- print("\033[1;41m\033[1;97m"+Aashu13[:i].center(63)+"\033[0m",end="\r");sys.stdout.flush();time.sleep(0.05)
+ print("\033[1;32m\033[1;97m"+Aashu13[:i].center(63)+"\033[0m",end="\r");sys.stdout.flush();time.sleep(0.05)
 print();print('\x1b[1;39m━'*63)
 print('\x1b[1;96m  Enter the target you want to test.\x1b[0m')
 print('\x1b[1;93m  Examples:\x1b[0m')
