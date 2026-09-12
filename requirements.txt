@@ -4,3 +4,4 @@ aiohttp_socks
 PyYAML
 requests
 colorama
+httpx[http2]
