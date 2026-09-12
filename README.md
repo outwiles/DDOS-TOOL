@@ -1,5 +1,3 @@
-A two-part study in offensive HTTP tooling: a modular baseline toolkit (`best/`) and a lean single-file variant (`worst/`) that squeezes roughly 10% more throughput out of the same proxy pool at the same load.
-
 # DDOS-TOOL
 
 <p align="center">
@@ -21,7 +19,7 @@ A two-part study in offensive HTTP tooling: a modular baseline toolkit (`best/`)
     <img src="https://img.shields.io/badge/Mail-outwiles%40proton.me-D14836?style=for-the-badge&logo=protonmail&logoColor=white" alt="Mail" />
   </a>
 </p>
-A two-part study in offensive HTTP tooling: a modular baseline toolkit (`best/`) and a lean single-file variant (`worst/`) that squeezes roughly 10% more throughput out of the same proxy pool at the same load.
+DDOS-TOOL is a Python stress-testing toolkit for authorized security testing — HTTP flood, Slowloris, TCP SYN, and UDP flood vectors with proxy rotation, HTTP/2 support, and origin concealment.
 
 ## Contents
 
