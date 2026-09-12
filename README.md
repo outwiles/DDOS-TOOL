@@ -1,3 +1,5 @@
+A two-part study in offensive HTTP tooling: a modular baseline toolkit (`best/`) and a lean single-file variant (`worst/`) that squeezes roughly 10% more throughput out of the same proxy pool at the same load.
+
 # DDOS-TOOL
 
 <p align="center">
