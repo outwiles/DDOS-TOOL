@@ -6,11 +6,19 @@
 
 **AASHU**
 
-**Author / Developer / Admin / Owner:** Aashu
-**GitHub:** [@outwiles](https://github.com/outwiles)
-**Telegram:** [@outwiles](https://t.me/outwiles)
-**Email:** [outwiles@proton.me](mailto:outwiles@proton.me)
 
+<p align="center">
+  <b>Developed by Aashu</b><br/><br/>
+  <a href="https://t.me/outwiles">
+    <img src="https://img.shields.io/badge/Telegram-@outwiles-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram" />
+  </a>
+  <a href="https://github.com/outwiles">
+    <img src="https://img.shields.io/badge/GitHub-@outwiles-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" />
+  </a>
+  <a href="mailto:outwiles@proton.me">
+    <img src="https://img.shields.io/badge/Mail-outwiles%40proton.me-D14836?style=for-the-badge&logo=protonmail&logoColor=white" alt="Mail" />
+  </a>
+</p>
 A two-part study in offensive HTTP tooling: a modular baseline toolkit (`best/`) and a lean single-file variant (`worst/`) that squeezes roughly 10% more throughput out of the same proxy pool at the same load.
 
 ## Contents
