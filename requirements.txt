@@ -1,3 +1,6 @@
+aiohttp
 h2
-cfonts
-pysocks
+aiohttp_socks
+PyYAML
+requests
+colorama
