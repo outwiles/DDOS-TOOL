@@ -11,18 +11,18 @@
 **Telegram:** [@outwiles](https://t.me/outwiles)
 **Email:** [outwiles@proton.me](mailto:outwiles@proton.me)
 
-A two-part study in offensive HTTP tooling: one production-grade toolkit and one deliberately broken reference implementation, for side-by-side comparison of what works and what doesn't.
+A two-part study in offensive HTTP tooling: a modular baseline toolkit (`best/`) and a lean single-file variant (`worst/`) that squeezes roughly 10% more throughput out of the same proxy pool at the same load.
 
 ## Contents
 
-- `best/` — working multi-vector toolkit with proxy rotation and origin concealment
-- `worst/` — single-file anti-pattern reference; every bad practice in one place
+- `best/` — modular multi-vector toolkit with proxy rotation, health-checked pool, and origin concealment
+- `worst/` — single-file lean variant; same target types, same concealment, faster on L7
 - `banner.py` — plain-text banner renderer
 - `HowToRun.md` — step-by-step run guide, OS by OS
 
 ## Why two?
 
-The `worst/` tool isn't a joke. It's a teaching artifact. Run it against a target and watch it fail in every way a naive implementation can — origin IP exposed, no rotation, single-threaded, default UA, no error handling. Then run `best/` against the same target and watch the difference. The gap between them is the entire point.
+`best/` is the modular reference — clean separation, health-checked proxy pool at startup, four vectors, cross-platform L4 support. `worst/` is the lean single-file variant that beats it on L7 throughput by caching sessions and connectors per proxy, skipping the startup health-check pass, and shipping a live stats loop. Pick `best/` for flexibility, `worst/` for raw L7 output.
 
 ## Vectors
 
@@ -33,13 +33,15 @@ The `worst/` tool isn't a joke. It's a teaching artifact. Run it against a targe
 | `tcp_syn` | L4 | Linux, macOS (root) | Raw sockets, spoofed source. Windows/Termux non-root blocked |
 | `udp_flood` | L4 | Linux, macOS (root) | Raw sockets, spoofed source. Windows/Termux non-root blocked |
 
+`best/` supports all four. `worst/` is L7 only (`http_flood`).
+
 ## Target types
 
 `http`, `telegram`, `discord` — the type only affects header preparation. All three are plain HTTP targets.
 
 ## Proxy format
 
-`best/proxies.txt`, one per line:
+`best/proxies.txt` and `worst/proxies.txt`, one per line:
 
 ```
 socks5://user:pass@host:port
@@ -73,7 +75,10 @@ DDOS-TOOL/
 │       ├── tcp_syn.py
 │       └── udp_flood.py
 └── worst/
-    └── ddos_worst.py
+    ├── README.md
+    ├── ddos_worst.py
+    ├── proxies.txt
+    └── requirements.txt
 ```
 
 ## Install
@@ -167,6 +172,44 @@ No root = no L4. L7 only.
 
 **For detailed per-OS run commands, config tuning, and troubleshooting, see [HowToRun.md](HowToRun.md).**
 
+## Running
+
+### `best/` — baseline toolkit
+
+Config-driven. Set `best/config.yaml`, then:
+
+```bash
+python -m best.main --config best/config.yaml --target example_web
+```
+
+### `worst/` — interactive lean variant
+
+Prompts on run, no config file:
+
+```bash
+cd worst
+python ddos_worst.py
+```
+
+You'll be asked for target, proxy use, threads, connections per thread, and duration. Or skip the prompts with env vars:
+
+```bash
+export AASHU_TARGET="https://example.com"
+export AASHU_THREADS=150
+export AASHU_CONNS=60
+export AASHU_DURATION=60
+export AASHU_PROXIES="proxies.txt"
+python ddos_worst.py
+```
+
+Live output every 5 seconds:
+
+```
+[03:22:41] sent=18234 failed=411 rps=3646 proxies=38/42
+```
+
+See [worst/README.md](worst/README.md) for the full rundown on why it's faster.
+
 ## Config quick reference
 
 `best/config.yaml`:
@@ -201,7 +244,7 @@ Tuning:
 
 - Use **PowerShell 7** or Windows Terminal. Legacy `cmd.exe` mishandles UTF-8 output.
 - Windows Defender may quarantine `best/` due to raw-socket imports. Add the repo folder to Defender exclusions for your own tests.
-- `http_flood` and `slowloris` run on `WindowsSelectorEventLoopPolicy` (set automatically in `main.py`).
+- `http_flood` and `slowloris` run on `WindowsSelectorEventLoopPolicy` (set automatically in `main.py` and `worst/ddos_worst.py`).
 - Firewall prompt on first run is normal — accept for private networks only.
 
 ### Linux
