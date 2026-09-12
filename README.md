@@ -280,6 +280,10 @@ Prints the AASHU banner in plain text with a short author block.
 
 You are responsible for what you run and where you point it. Only use this against systems you own or have explicit written authorization to test.
 
+## Keywords
+
+ddos tool, ddos attack script, ddos python, http flood, http/2 flood, slowloris, tcp syn flood, udp flood, stress testing tool, load testing tool, proxy rotation, proxy pool, origin concealment, ip masking, red team tool, penetration testing, offensive security, network stress test, authorized security testing, ddos github, aashu, outwiles
+
 ## License
 
 MIT © Aashu
