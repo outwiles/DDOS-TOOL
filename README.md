@@ -102,7 +102,6 @@ Need **3.10+**. Uses `X | None` unions and modern `asyncio`.
 ### Windows 10 / 11
 
 ```powershell
-winget install Python.Python.3.12
 git clone https://github.com/outwiles/DDOS-TOOL.git
 cd DDOS-TOOL
 python -m venv .venv
@@ -122,7 +121,6 @@ L7 vectors run fine. **Raw socket vectors do not work on Windows.**
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-pip python3-venv git
 git clone https://github.com/outwiles/DDOS-TOOL.git
 cd DDOS-TOOL
 python3 -m venv .venv
@@ -133,7 +131,6 @@ pip install -r requirements.txt
 ### Linux (Fedora / RHEL)
 
 ```bash
-sudo dnf install -y python3 python3-pip git
 git clone https://github.com/outwiles/DDOS-TOOL.git
 cd DDOS-TOOL
 python3 -m venv .venv
@@ -144,7 +141,6 @@ pip install -r requirements.txt
 ### Linux (Arch)
 
 ```bash
-sudo pacman -S python python-pip git
 git clone https://github.com/outwiles/DDOS-TOOL.git
 cd DDOS-TOOL
 python -m venv .venv
@@ -156,7 +152,6 @@ pip install -r requirements.txt
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install python git
 git clone https://github.com/outwiles/DDOS-TOOL.git
 cd DDOS-TOOL
 python3 -m venv .venv
@@ -168,7 +163,6 @@ pip install -r requirements.txt
 
 ```bash
 pkg update && pkg upgrade -y
-pkg install -y python git clang
 git clone https://github.com/outwiles/DDOS-TOOL.git
 cd DDOS-TOOL
 python -m venv .venv
