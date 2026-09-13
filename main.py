@@ -21,11 +21,11 @@ def gt()->dict:
 async def mns(o:dict):
     r=None;t=o["t"]
     if o["up"]:
-        h=t.startswith("https://");r=PRX(o["pf"]);g,b=r.ld(h)
-        if h:print(f"loaded {g} tunnel-capable proxies ({b} skipped)")
-        else:print(f"loaded {g} proxies ({b} malformed skipped)")
+        r=PRX(o["pf"]);g,b=r.ld()
+        print(f"loaded {g} proxies ({b} malformed/duplicates skipped)")
         if g==0:print("no usable proxies, exiting");return
-        print(f"probing {g} proxies against {t}...");t0=time.time();a=await r.flt(t)
+        print(f"probing {g} proxies against {t}...")
+        t0=time.time();a=await r.flt(t)
         print(f"probe done: {a}/{g} alive in {time.time()-t0:.1f}s")
         if a==0:print("no proxies survived the probe, exiting");return
     print(f"starting: target={t} concurrency={CN} (Ctrl+C to stop)");print()
