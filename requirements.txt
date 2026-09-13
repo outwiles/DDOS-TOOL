@@ -1,7 +1,5 @@
-aiohttp
-h2
-aiohttp_socks
-PyYAML
-requests
-colorama
 httpx[http2]
+h2
+hpack
+hyperframe
+python-cfonts
